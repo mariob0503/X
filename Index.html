@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Sequence Game</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #upload, #game, #leaderboard {
+            margin: 20px auto;
+            padding: 20px;
+            border: 2px solid #00f;
+            border-radius: 10px;
+            width: 620px;
+            background: rgba(0, 0, 50, 0.8);
+            box-shadow: 0 0 15px #00f;
+        }
+        #upload {
+            position: relative;
+            z-index: 10;
+        }
+        #topImages {
+            margin-bottom: 20px;
+        }
+        #topImages img {
+            width: 150px;
+            height: 150px;
+            border: 3px solid #00f;
+            border-radius: 8px;
+            margin: 0 10px;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        #topImages img:hover {
+            transform: scale(1.05);
+        }
+        #bottomImages {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        #bottomImages img {
+            width: 100px;
+            height: 100px;
+            border: 3px solid #00f;
+            border-radius: 8px;
+            cursor: pointer;
+            object-fit: cover;
+            transition: border-color 0.3s, transform 0.3s;
+        }
+        #bottomImages img:hover {
+            transform: scale(1.05);
+        }
+        #bottomImages img.selected {
+            border-color: yellow;
+            box-shadow: 0 0 10px yellow;
+        }
+        #timer, #score {
+            font-size: 24px;
+            margin: 10px 0;
+            text-shadow: 0 0 5px #00f;
+        }
+        #fog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0);
+            pointer-events: none;
+            z-index: 5;
+            transition: opacity 1s ease-in-out;
+        }
+        #leaderboard ul {
+            list-style: none;
+            padding: 0;
+        }
+        #leaderboard li {
+            font-size: 20px;
+            margin: 5px 0;
+            text-shadow: 0 0 5px #00f;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background: #00f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background: #00a;
+        }
+    </style>
+</head>
+<body>
+    <div id="upload">
+        <input type="file" multiple accept="image/*" id="fileInput">
+        <button id="startButton" disabled>Start Game</button>
+    </div>
+    <div id="game" style="display: none;">
+        <div id="topImages">
+            <img id="top1">
+            <img id="top2">
+            <img id="top3">
+        </div>
+        <div id="bottomImages"></div>
+        <div id="timer">10.0</div>
+        <div id="score">0.0</div>
+    </div>
+    <div id="fog"></div>
+    <div id="leaderboard" style="display: none;">
+        <h2>Leaderboard</h2>
+        <ul id="scoreList"></ul>
+        <button id="playAgain">Play Again</button>
+    </div>
+    <script>
+        let images = [];
+        let topSequence = [];
+        let bottomImages = [];
+        let selection = [];
+        let round = 1;
+        let score = 0;
+        let timeLeft = 10;
+        let timerId;
+        let fogOpacity = 0;
+
+        const fileInput = document.getElementById('fileInput');
+        const startButton = document.getElementById('startButton');
+        const gameDiv = document.getElementById('game');
+        const topImages = [document.getElementById('top1'), document.getElementById('top2'), document.getElementById('top3')];
+        const bottomImagesDiv = document.getElementById('bottomImages');
+        const timerDiv = document.getElementById('timer');
+        const scoreDiv = document.getElementById('score');
+        const fogDiv = document.getElementById('fog');
+        const leaderboardDiv = document.getElementById('leaderboard');
+        const scoreList = document.getElementById('scoreList');
+        const playAgainButton = document.getElementById('playAgain');
+
+        fileInput.addEventListener('change', handleFileUpload);
+        startButton.addEventListener('click', startGame);
+        playAgainButton.addEventListener('click', startGame);
+
+        function handleFileUpload() {
+            const files = fileInput.files;
+            if (files.length !== 10) {
+                alert('Please upload exactly 10 images.');
+                fileInput.value = '';
+                return;
+            }
+            images = [];
+            let loaded = 0;
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    images.push(e.target.result);
+                    loaded++;
+                    if (loaded === 10) {
+                        startButton.disabled = false;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function startGame() {
+            if (images.length !== 10) {
+                alert('Please upload 10 images first.');
+                return;
+            }
+            round = 1;
+            score = 0;
+            timeLeft = 10;
+            fogOpacity = 0;
+            selection = [];
+            document.getElementById('upload').style.display = 'none';
+            gameDiv.style.display = 'block';
+            leaderboardDiv.style.display = 'none';
+            setupRound();
+        }
+
+        function setupRound() {
+            topSequence = [];
+            while (topSequence.length < 3) {
+                const idx = Math.floor(Math.random() * 10);
+                if (!topSequence.includes(idx)) {
+                    topSequence.push(idx);
+                }
+            }
+            bottomImages = [...Array(10).keys()];
+            shuffle(bottomImages);
+            topImages.forEach((img, i) => {
+                img.src = images[topSequence[i]];
+            });
+            bottomImagesDiv.innerHTML = '';
+            bottomImages.forEach((idx) => {
+                const img = document.createElement('img');
+                img.src = images[idx];
+                img.dataset.index = idx;
+                img.addEventListener('click', () => selectImage(idx));
+                bottomImagesDiv.appendChild(img);
+            });
+            selection = [];
+            timerDiv.textContent = timeLeft.toFixed(1);
+            scoreDiv.textContent = score.toFixed(1);
+            clearInterval(timerId);
+            timerId = setInterval(() => {
+                timeLeft -= 0.1;
+                timerDiv.textContent = Math.max(timeLeft, 0).toFixed(1);
+                if (timeLeft <= 0) {
+                    clearInterval(timerId);
+                    gameOver();
+                }
+            }, 100);
+            if (round >= 3) {
+                fogOpacity = 0.1 + (round - 3) * 0.1; // Starts at 0.1, increases by 0.1 each round
+                fogDiv.style.opacity = Math.min(fogOpacity, 0.5); // Cap at 0.5 for visibility
+            } else {
+                fogDiv.style.opacity = 0;
+            }
+        }
+
+        function selectImage(idx) {
+            if (selection.length < 3 && !selection.includes(idx)) {
+                selection.push(idx);
+                const img = bottomImagesDiv.querySelector(`img[data-index="${idx}"]`);
+                img.classList.add('selected');
+                if (selection.length === 3) {
+                    checkSequence();
+                }
+            }
+        }
+
+        function checkSequence() {
+            if (JSON.stringify(selection) === JSON.stringify(topSequence)) {
+                const points = 2 * Math.pow(1.25, round - 1);
+                score += points;
+                round++;
+                timeLeft = 10 * Math.pow(0.75, round - 1);
+                setupRound();
+            } else {
+                gameOver();
+            }
+        }
+
+        function gameOver() {
+            clearInterval(timerId);
+            gameDiv.style.display = 'none';
+            leaderboardDiv.style.display = 'block';
+            let scores = JSON.parse(localStorage.getItem('scores') || '[]');
+            scores.push(score);
+            scores.sort((a, b) => b - a);
+            localStorage.setItem('scores', JSON.stringify(scores));
+            scoreList.innerHTML = '';
+            scores.slice(0, 5).forEach((s, i) => {
+                const li = document.createElement('li');
+                li.textContent = `${i + 1}. ${s.toFixed(1)}`;
+                scoreList.appendChild(li);
+            });
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+    </script>
+</body>
+</html>
