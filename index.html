@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Sequence Game</title>
+    <title>Simplix GymRewards - Image Sequence Game</title>
     <style>
         body {
             background-color: black;
@@ -14,7 +14,23 @@
             padding: 0;
             overflow: hidden;
         }
-        #upload, #game, #leaderboard {
+        #header {
+            margin: 20px auto;
+            padding: 10px;
+            font-size: 36px;
+            font-weight: bold;
+            border: 3px solid white;
+            border-radius: 10px;
+            width: 620px;
+            background: rgba(0, 0, 50, 0.8);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 5px white; }
+            50% { box-shadow: 0 0 20px white; }
+            100% { box-shadow: 0 0 5px white; }
+        }
+        #game, #leaderboard {
             margin: 20px auto;
             padding: 20px;
             border: 2px solid #00f;
@@ -22,10 +38,6 @@
             width: 620px;
             background: rgba(0, 0, 50, 0.8);
             box-shadow: 0 0 15px #00f;
-        }
-        #upload {
-            position: relative;
-            z-index: 10;
         }
         #topImages {
             margin-bottom: 20px;
@@ -99,21 +111,14 @@
             cursor: pointer;
             transition: background 0.3s;
         }
-        button:disabled {
-            background: #666;
-            cursor: not-allowed;
-        }
-        button:hover:not(:disabled) {
+        button:hover {
             background: #00a;
         }
     </style>
 </head>
 <body>
-    <div id="upload">
-        <input type="file" multiple accept="image/*" id="fileInput">
-        <button id="startButton" disabled>Start Game</button>
-    </div>
-    <div id="game" style="display: none;">
+    <div id="header">Simplix GymRewards</div>
+    <div id="game">
         <div id="topImages">
             <img id="top1">
             <img id="top2">
@@ -130,7 +135,18 @@
         <button id="playAgain">Play Again</button>
     </div>
     <script>
-        let images = [];
+        const images = [
+            'assets/image1.jpg',
+            'assets/image2.jpg',
+            'assets/image3.jpg',
+            'assets/image4.jpg',
+            'assets/image5.jpg',
+            'assets/image6.jpg',
+            'assets/image7.jpg',
+            'assets/image8.jpg',
+            'assets/image9.jpg',
+            'assets/image10.jpg'
+        ];
         let topSequence = [];
         let bottomImages = [];
         let selection = [];
@@ -140,8 +156,6 @@
         let timerId;
         let fogOpacity = 0;
 
-        const fileInput = document.getElementById('fileInput');
-        const startButton = document.getElementById('startButton');
         const gameDiv = document.getElementById('game');
         const topImages = [document.getElementById('top1'), document.getElementById('top2'), document.getElementById('top3')];
         const bottomImagesDiv = document.getElementById('bottomImages');
@@ -152,43 +166,17 @@
         const scoreList = document.getElementById('scoreList');
         const playAgainButton = document.getElementById('playAgain');
 
-        fileInput.addEventListener('change', handleFileUpload);
-        startButton.addEventListener('click', startGame);
         playAgainButton.addEventListener('click', startGame);
 
-        function handleFileUpload() {
-            const files = fileInput.files;
-            if (files.length !== 10) {
-                alert('Please upload exactly 10 images.');
-                fileInput.value = '';
-                return;
-            }
-            images = [];
-            let loaded = 0;
-            for (let file of files) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    images.push(e.target.result);
-                    loaded++;
-                    if (loaded === 10) {
-                        startButton.disabled = false;
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        }
+        // Start the game immediately on page load
+        window.onload = startGame;
 
         function startGame() {
-            if (images.length !== 10) {
-                alert('Please upload 10 images first.');
-                return;
-            }
             round = 1;
             score = 0;
             timeLeft = 10;
             fogOpacity = 0;
             selection = [];
-            document.getElementById('upload').style.display = 'none';
             gameDiv.style.display = 'block';
             leaderboardDiv.style.display = 'none';
             setupRound();
@@ -228,8 +216,8 @@
                 }
             }, 100);
             if (round >= 3) {
-                fogOpacity = 0.1 + (round - 3) * 0.1; // Starts at 0.1, increases by 0.1 each round
-                fogDiv.style.opacity = Math.min(fogOpacity, 0.5); // Cap at 0.5 for visibility
+                fogOpacity = 0.1 + (round - 3) * 0.1;
+                fogDiv.style.opacity = Math.min(fogOpacity, 0.5);
             } else {
                 fogDiv.style.opacity = 0;
             }
