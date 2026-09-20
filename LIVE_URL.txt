@@ -1,0 +1,6 @@
+# Demo URL
+
+Demo tunnels (e.g. trycloudflare.com) are ephemeral and not persistent.
+For local testing, run `npm run preview` to start the server on port 4173.
+
+Production deployment via Firebase Hosting is planned for a future release.
